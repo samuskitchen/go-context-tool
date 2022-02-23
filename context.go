@@ -1,9 +1,10 @@
 package context_tool
 
 import (
-	"gorm.io/gorm"
 	"strconv"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 type MapFunc map[string]func(tx *gorm.DB) *gorm.DB
 
 type Skip interface {
-	OmitFields() ([]string, []string)
+	SkipFields() ([]string, []string)
 }
 
 type QueryParameter interface {
@@ -27,10 +28,10 @@ type ContextToolInterface interface {
 
 	//WithSkip receives as a parameter the implementation of:
 	//	type Skip interface {
-	//			//return (omitted parameters, preloads)
-	//			OmitFields() ([]string, []string)
+	//		//return (omitted parameters, preloads)
+	//		OmitFields() ([]string, []string)
 	//	}
-	WithSkip(o Skip) ContextToolInterface
+	WithSkip(s Skip) ContextToolInterface
 
 	AddCustomPreloadFunc(fns MapFunc)
 
@@ -51,7 +52,7 @@ type contextTool struct {
 // NewContextTool prepare the context
 func NewContextTool(c QueryParameter) ContextToolInterface {
 	var err error
-	var omit string = c.QueryParam("omit")
+	var skip string = c.QueryParam("skip")
 	offset, err := strconv.Atoi(c.QueryParam("offset"))
 	if err != nil {
 		offset = 0
@@ -71,13 +72,13 @@ func NewContextTool(c QueryParameter) ContextToolInterface {
 	}
 
 	var omits []string
-	if omit != "" {
-		omits = strings.Split(omit, ",")
+	if skip != "" {
+		omits = strings.Split(skip, ",")
 	}
 
 	return &contextTool{
 		Params: Params{
-			omitFields: omits,
+			skipFields: omits,
 			offset:     offset,
 			limit:      limit,
 		},
@@ -86,17 +87,18 @@ func NewContextTool(c QueryParameter) ContextToolInterface {
 		preloadFunctions: make(MapFunc),
 	}
 }
+
 func (c *contextTool) GetParams() Params {
 	return c.Params
 }
 
 func (c *contextTool) WithSkip(skip Skip) ContextToolInterface {
-	allowsOmits, allowPreloads := skip.OmitFields()
+	allowsOmits, allowPreloads := skip.SkipFields()
 	for _, alp := range allowPreloads {
 		c.fieldsForPreload[alp] = struct{}{}
 	}
 
-	for _, fil := range c.omitFields {
+	for _, fil := range c.skipFields {
 		if search(allowsOmits, fil) {
 			c.fieldsForOmit[fil] = struct{}{}
 			continue
