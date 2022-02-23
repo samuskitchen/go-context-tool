@@ -25,7 +25,7 @@ Ejemplo
 
     // Implementation of the Skip interface of context_tool which helps to indicate 
 	// which attributes are skippable and which have to be preloaded by GORM
-    func (s *Service) OmitFields() ([]string, []string) { 
+    func (s *Service) SkipFields() ([]string, []string) { 
         // First slice indicates omittable attributes and the second slice pre-loaded ones
         // Gorm will preload all the fields that appear in the slide       
 	    return []string{"Name"}, []string{"Books"}
